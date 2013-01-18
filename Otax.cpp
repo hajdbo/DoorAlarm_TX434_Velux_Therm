@@ -5,10 +5,6 @@
 //struct { uint8_t state; char bits; uint16_t data; } OTAX;
 //struct { uint8_t state; char bits; uint16_t data; } Otax;
 
-uint8_t OTAX_bit(uint8_t value) {
-    Otax.data = (Otax.data << 1) | value;
-    return ++Otax.bits != 13 ? OK : DONE;
-}
 
 void OTAXon() {
   for (int count=0; count<10; count++) {
@@ -18,7 +14,7 @@ void OTAXon() {
     OTAXshort0();
     OTAXlong1();
     OTAXshort0();  
-    digitalWriteFast(TXpin, LOW);
+    digitalWriteFast(TX434pin, LOW);
     sei();
     delay(10);
   }
@@ -32,7 +28,7 @@ void OTAXoff() {
     OTAXlong1();
     OTAXshort0();
     OTAXshort0();
-    digitalWriteFast(TXpin, LOW);
+    digitalWriteFast(TX434pin, LOW);
     sei();
     delay(10);
   }
@@ -40,16 +36,16 @@ void OTAXoff() {
 
 /// PRIVATE METHODS ///////////:
 void OTAXshort0() {
-  digitalWriteFast(TXpin, LOW);
+  digitalWriteFast(TX434pin, LOW);
   delayMicroseconds(1450);
-  digitalWriteFast(TXpin, HIGH);
+  digitalWriteFast(TX434pin, HIGH);
   delayMicroseconds(800);
 }
 
 void OTAXlong1() {
-  digitalWriteFast(TXpin, LOW);
+  digitalWriteFast(TX434pin, LOW);
   delayMicroseconds(800);
-  digitalWriteFast(TXpin, HIGH);
+  digitalWriteFast(TX434pin, HIGH);
   delayMicroseconds(1450);
 }
 

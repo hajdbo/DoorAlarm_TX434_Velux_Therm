@@ -5,16 +5,15 @@
 
 //struct { uint8_t state; char bits; uint16_t data; } OTAX;
 //struct { uint8_t state; char bits; uint16_t data; } Otax;
-struct { uint8_t state; char bits; uint16_t data; } Otax;
 enum { UNKNOWN, OK, DONE };
 
 
-uint8_t OTAX_bit(uint8_t value);
+//uint8_t OTAX_bit(uint8_t value);
 void OTAXoff();
 void OTAXon();
 void OTAXshort0();
 void OTAXlong1();
-#define TXpin 7
+#define TX434pin 7
 //extern const int TXpin;
 
 

@@ -36,8 +36,8 @@ apparemment une fin de msg est signalée avec DB6 (après on et après off)
 #define DHT22_NO_FLOAT
 #include <DHT22.h>
 //#include <JeeLib.h>   // pour le capteur de temperature
-#define TXpin 7
-#define RXpin 3
+#define TX434pin 7
+#define RX434pin 3
 #define doorPin   5
 #define ledPin   13
 #define DHT22_PIN  4
@@ -57,7 +57,7 @@ int temp_paris = 116; // moyenne annuelle 11.6°C
 byte humid_paris = 78; // moyenne annuelle 78%
 byte humid_DHT22 = 65;
 
-enum { UNKNOWN, OK, DONE };
+//enum { UNKNOWN, OK, DONE };
 enum { OTAX_PROXY, OTAX_NOPROXY };
 enum { OTAX_NOTRECEIVED, OTAX_RXOFF, OTAX_RXON };
 enum { OTAX_DONTFORCE, OTAX_FORCEOFF, OTAX_FORCEON, OTAX_REGULATE };
@@ -74,6 +74,7 @@ uint8_t OTAX_bit(uint8_t value) {
     Otax.data = (Otax.data << 1) | value;
     return ++Otax.bits != 13 ? OK : DONE;
 }
+
 
 
 // CAPTEUR DE TEMPERATURE/HUMIDITE DHT22
@@ -122,8 +123,8 @@ void RX434interrupt() {
 void setup() {
   pinMode(doorPin, INPUT);
   pinMode(ledPin, OUTPUT);
-  pinMode(TXpin, OUTPUT);
-  pinMode(RXpin, INPUT); //pin Digital3 (hardware interrupt 1)
+  pinMode(TX434pin, OUTPUT);
+  pinMode(RX434pin, INPUT); //pin Digital3 (hardware interrupt 1)
   pinMode(veluxDownPin, OUTPUT);
   pinMode(veluxStopPin, OUTPUT);
   pinMode(veluxUpPin, OUTPUT);
