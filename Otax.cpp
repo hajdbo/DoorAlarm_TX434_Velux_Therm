@@ -2,40 +2,36 @@
 #include "Otax.h"
 #include  <digitalWriteFast.h>
 
-//struct { uint8_t state; char bits; uint16_t data; } OTAX;
-//struct { uint8_t state; char bits; uint16_t data; } Otax;
-
-// constructeur
 Otax::Otax() {
-  OTAXprofile = OTAX_PROXY;
-  OTAXrx = OTAX_NOTRECEIVED;
-  OTAXforce = OTAX_DONTFORCE;
-  OTAXlastTXtime = 0; // dernier TX vers l'OTAX (ms)
-  OTAXlastRXtime = 0; // dernier RX de la télécommande OTAX (ms)
+  profile = OTAX_PROXY;
+  rx = OTAX_NOTRECEIVED;
+  force = OTAX_DONTFORCE;
+  lastTXtime = 0; // dernier TX vers l'OTAX (ms)
+  lastRXtime = 0; // dernier RX de la télécommande OTAX (ms)
 }
 
-void Otax::OTAXon() {
+void Otax::sendOn() {
   for (int count=0; count<10; count++) {
     cli();
-    for (int i=0; i<3; i++) { OTAXshort0(); OTAXlong1(); OTAXlong1(); } //adresse chaudiere de boris
-    OTAXshort0();
-    OTAXshort0();
-    OTAXlong1();
-    OTAXshort0();  
+    for (int i=0; i<3; i++) { short0(); long1(); long1(); } //adresse chaudiere de boris
+    short0();
+    short0();
+    long1();
+    short0();  
     digitalWriteFast(TX434pin, LOW);
     sei();
     delay(10);
   }
 }
 
-void Otax::OTAXoff() {
+void Otax::sendOff() {
   for (int count=0; count<10; count++) {
     cli();
-    for (int i=0; i<3; i++) { OTAXshort0(); OTAXlong1(); OTAXlong1(); } //adresse chaudiere de boris
-    OTAXshort0();
-    OTAXlong1();
-    OTAXshort0();
-    OTAXshort0();
+    for (int i=0; i<3; i++) { short0(); long1(); long1(); } //adresse chaudiere de boris
+    short0();
+    long1();
+    short0();
+    short0();
     digitalWriteFast(TX434pin, LOW);
     sei();
     delay(10);
@@ -43,14 +39,14 @@ void Otax::OTAXoff() {
 }
 
 /// PRIVATE METHODS ///////////:
-void Otax::OTAXshort0() {
+void Otax::short0() {
   digitalWriteFast(TX434pin, LOW);
   delayMicroseconds(1450);
   digitalWriteFast(TX434pin, HIGH);
   delayMicroseconds(800);
 }
 
-void Otax::OTAXlong1() {
+void Otax::long1() {
   digitalWriteFast(TX434pin, LOW);
   delayMicroseconds(800);
   digitalWriteFast(TX434pin, HIGH);

@@ -92,7 +92,7 @@ void setup() {
   pinMode(veluxUpPin, OUTPUT);
   Serial.begin(57600);
   Serial.println("\ndooralarm starting");
-  myOtax.OTAXprofile = OTAX_PROXY;
+  myOtax.profile = OTAX_PROXY;
   attachInterrupt(1, RX434interrupt, CHANGE);
 }
 
@@ -114,7 +114,7 @@ void loop() {
   
   //////////////////// Thermostat OTAX RX 434 ////////////////////////////////////
   if (myOtax.state == DONE) {
-      myOtax.OTAXlastRXtime = millis();
+      myOtax.lastRXtime = millis();
       
 #ifdef DEBUG_OTAX
       Serial.print("OTAX RX ");
@@ -123,28 +123,28 @@ void loop() {
       
       myOtax.state = UNKNOWN;
       switch (myOtax.data) {
-        case 0xDB2: // remote manual ON
-        case 0xDB4: // remote manual OFF
+        case 0xDB2: // remote set on NORMAL mode sent cmd "ON"
+        case 0xDB4: // remote set on NORMAL mode sent cmd "OFF"
         case 0xDB6: // remote manual end-of-msg
-                    myOtax.OTAXprofile=OTAX_NOPROXY; // on a passé la télécommande en mode manuel, on ne fait plus rien
+                    myOtax.profile=OTAX_NOPROXY; // on a passé la télécommande en mode manuel, on ne fait plus rien
                     break;                    // on s'arrete de transmettre (relayer/modifier) à la chaudière
 
-        case 0xCB2: myOtax.OTAXprofile=OTAX_PROXY; myOtax.OTAXrx=OTAX_RXON;  break; // remote PC ON
-        case 0xCB4: myOtax.OTAXprofile=OTAX_PROXY; myOtax.OTAXrx=OTAX_RXOFF; break; // remote PC OFF
-        case 0xCB6: myOtax.OTAXprofile=OTAX_PROXY;                  break; // remote PC end-of-msg
-                     // si on recoit CB2,CB4,CB6: qq'un a demandé le mode "PC"
+        case 0xCB2: myOtax.profile=OTAX_PROXY; myOtax.rx=OTAX_RXON;  break; // remote set on PC mode sent cmd "ON"
+        case 0xCB4: myOtax.profile=OTAX_PROXY; myOtax.rx=OTAX_RXOFF; break; // remote set on PC mode sent cmd "OFF"
+        case 0xCB6: myOtax.profile=OTAX_PROXY;                  break; // remote PC end-of-msg
+                     // si on recoit CB2,CB4,CB6: la télécommande est en position "PC"
       }
   }
   
-  if ((myOtax.OTAXprofile == OTAX_PROXY) && (myOtax.OTAXlastTXtime + 60000 < millis()) && (myOtax.OTAXlastRXtime + 10000 < millis())) {
-      if (( (myOtax.OTAXrx == OTAX_RXON)&&(myOtax.OTAXforce==OTAX_DONTFORCE)) || (myOtax.OTAXforce==OTAX_FORCEON)) {
+  if ((myOtax.profile == OTAX_PROXY) && (myOtax.lastTXtime + 60000 < millis()) && (myOtax.lastRXtime + 10000 < millis())) {
+      if (( (myOtax.rx == OTAX_RXON)&&(myOtax.force==OTAX_DONTFORCE)) || (myOtax.force==OTAX_FORCEON)) {
         Serial.println("TXch ON");
-        myOtax.OTAXon();
-      } else if (( (myOtax.OTAXrx == OTAX_RXOFF)&&(myOtax.OTAXforce==OTAX_DONTFORCE)) || (myOtax.OTAXforce==OTAX_FORCEOFF)) {
+        myOtax.sendOn();
+      } else if (( (myOtax.rx == OTAX_RXOFF)&&(myOtax.force==OTAX_DONTFORCE)) || (myOtax.force==OTAX_FORCEOFF)) {
         Serial.println("TXch OFF");
-        myOtax.OTAXoff();
+        myOtax.sendOff();
       }
-      myOtax.OTAXlastTXtime = millis();
+      myOtax.lastTXtime = millis();
   }
   
   //////////////////// SERIAL CMD ////////////////////////////////////
@@ -165,11 +165,11 @@ void loop() {
       case 'K': digitalWrite(veluxDownPin, HIGH); delay(200); digitalWrite(veluxDownPin, LOW); break;
       case 'L': digitalWrite(veluxStopPin, HIGH); delay(200); digitalWrite(veluxStopPin, LOW); break;
       case 'M': digitalWrite(veluxUpPin, HIGH);   delay(200); digitalWrite(veluxUpPin, LOW);   break;
-      case 'N': Serial.println("force th off");   myOtax.OTAXforce=OTAX_FORCEOFF;  break; // OTAX force off
-      case 'O': Serial.println("force th on");    myOtax.OTAXforce=OTAX_FORCEON;   break; // OTAX force on
-      case 'P': Serial.println("don't force th"); myOtax.OTAXforce=OTAX_DONTFORCE; break; // OTAX proxy no-override
-      case 'Q': Serial.println("th on");  myOtax.OTAXon();  break; // test 1 paquet
-      case 'R': Serial.println("th off"); myOtax.OTAXoff(); break; // test 1 paquet
+      case 'N': Serial.println("force th off");   myOtax.force=OTAX_FORCEOFF;  break; // OTAX force off
+      case 'O': Serial.println("force th on");    myOtax.force=OTAX_FORCEON;   break; // OTAX force on
+      case 'P': Serial.println("don't force th"); myOtax.force=OTAX_DONTFORCE; break; // OTAX proxy no-override
+      case 'Q': Serial.println("th on");  myOtax.sendOn();  break; // test 1 paquet
+      case 'R': Serial.println("th off"); myOtax.sendOff(); break; // test 1 paquet
       case 'S': {// data externe temp_appart/temp_paris/%humid_paris   S205;-013;056
         while (Serial.available() < 12)  { delay(100); }
         temp_appart_TEMPerUSB  = (Serial.read()-48)*100; // ascii '0'=48(dec)

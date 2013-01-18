@@ -25,23 +25,23 @@ enum { OTAX_DONTFORCE, OTAX_FORCEOFF, OTAX_FORCEON, OTAX_REGULATE };
 
 class Otax {
   public:
-    uint8_t OTAXprofile; // = OTAX_PROXY;
-    uint8_t OTAXrx; // = OTAX_NOTRECEIVED;
-    uint8_t OTAXforce; // = OTAX_DONTFORCE;
-    unsigned long OTAXlastTXtime; // = 0; // dernier TX vers l'OTAX (ms)
-    unsigned long OTAXlastRXtime; // = 0; // dernier RX de la télécommande OTAX (ms)
+    uint8_t profile; // = OTAX_PROXY;
+    uint8_t rx; // = OTAX_NOTRECEIVED;
+    uint8_t force; // = OTAX_DONTFORCE;
+    unsigned long lastTXtime; // = 0; // dernier TX vers l'OTAX (ms)
+    unsigned long lastRXtime; // = 0; // dernier RX de la télécommande OTAX (ms)
 
       Otax();
-      void OTAXon();
-      void OTAXoff();
+      void sendOn();
+      void sendOff();
       uint8_t state;
       char bits;
       uint16_t data;
       uint8_t OTAX_bit(uint8_t value);
 
   private:
-      void OTAXshort0();
-      void OTAXlong1();
+      void short0();
+      void long1();
 };
 
 #endif
