@@ -9,22 +9,9 @@ TODO:
 timer pour lire la temp/humid chaque x minutes
 ordre de temperature idéale
 tester la qualité de la réception 434 dans l'alcove
-ajouter un fil d'antenne pour RX 434
-ajouter une horloge pour programmation (+NTP?)
+ajouter des fils d'antenne pour RX/TX 434
+ajouter une horloge pour programmation (ou NTP?)
 ajouter une transmission de températeure externe et interne pour aider à réguler le chauffage
-
-////RX 434MHz digital pin3
-Decoder for 433 MHz OTAX thermostat
-S=800us   L=1450us
-boris ON  SLL SLL SLL SSLS     DB2 répété 10 fois, puis DB6
-boris OFF SLL SLL SLL SLSS     DB4 répété 10 fois, puis DB6
-maman ON  SLL LLL SLL SSLS     FB2 répété 10 fois, puis FB6
-maman OFF SLL LLL SLL SLSS     FB4 répété 10 fois, puis FB6
-apparemment une fin de msg est signalée avec DB6 (après on et après off)
-1 bit start (S)
-5 bits id chaudiere (maman: LLLLL boris: LLSLL)
-3 bits commande ??? tjours SLL
-4 bits action demandée SSLS=on  SLSS=off
 */
 
 // #define DEBUG_OTAX 1
@@ -36,14 +23,7 @@ apparemment une fin de msg est signalée avec DB6 (après on et après off)
 #define DHT22_NO_FLOAT
 #include <DHT22.h>
 //#include <JeeLib.h>   // pour le capteur de temperature
-#define TX434pin 7
-#define RX434pin 3
-#define doorPin   5
-#define ledPin   13
-#define DHT22_PIN  4
-#define veluxDownPin 10
-#define veluxStopPin 11
-#define veluxUpPin   12
+#include "pins.h"
 
 int DoorState = LOW;       // current state of the button
 int lastDoorStateEDGE = LOW;   // previous state of the button (edge detection)
@@ -57,25 +37,7 @@ int temp_paris = 116; // moyenne annuelle 11.6°C
 byte humid_paris = 78; // moyenne annuelle 78%
 byte humid_DHT22 = 65;
 
-//enum { UNKNOWN, OK, DONE };
-enum { OTAX_PROXY, OTAX_NOPROXY };
-enum { OTAX_NOTRECEIVED, OTAX_RXOFF, OTAX_RXON };
-enum { OTAX_DONTFORCE, OTAX_FORCEOFF, OTAX_FORCEON, OTAX_REGULATE };
-
-struct { uint8_t state; char bits; uint16_t data; } Otax;
-
-uint8_t OTAXprofile = OTAX_PROXY;
-uint8_t OTAXrx = OTAX_NOTRECEIVED;
-uint8_t OTAXforce = OTAX_DONTFORCE;
-unsigned long OTAXlastTX = 0; // dernier TX vers l'OTAX (ms)
-unsigned long OTAXlastRX = 0; // dernier RX de la télécommande OTAX (ms)
-
-uint8_t OTAX_bit(uint8_t value) {
-    Otax.data = (Otax.data << 1) | value;
-    return ++Otax.bits != 13 ? OK : DONE;
-}
-
-
+Otax myOtax;
 
 // CAPTEUR DE TEMPERATURE/HUMIDITE DHT22
 // deux libs au choix : jeelib ou dht22
@@ -102,9 +64,9 @@ void RX434interrupt() {
       highstart = m;
       lowwidth = m - lowstart;
       if (lowwidth > 3000) {
-        Otax.data = 0;
-        Otax.bits = 0;
-        Otax.state = UNKNOWN;
+        myOtax.data = 0;
+        myOtax.bits = 0;
+        myOtax.state = UNKNOWN;
       }
     } else { // LOW
       m=micros();
@@ -112,11 +74,11 @@ void RX434interrupt() {
       highwidth = m - highstart;
     }
     
-    if ((Otax.state != DONE) && (val==LOW)) // 800:690-910 1450:1350-1570
+    if ((myOtax.state != DONE) && (val==LOW)) // 800:690-910 1450:1350-1570
         switch ((highwidth + 30) / 220) {
-            case 3:  Otax.state = OTAX_bit(0); break;
-            case 6:  Otax.state = OTAX_bit(1); break;
-            default: Otax.state = UNKNOWN; Otax.data = 0; Otax.bits = 0;
+            case 3:  myOtax.state = myOtax.OTAX_bit(0); break;
+            case 6:  myOtax.state = myOtax.OTAX_bit(1); break;
+            default: myOtax.state = UNKNOWN; myOtax.data = 0; myOtax.bits = 0;
         }
 }
 
@@ -130,7 +92,7 @@ void setup() {
   pinMode(veluxUpPin, OUTPUT);
   Serial.begin(57600);
   Serial.println("\ndooralarm starting");
-  OTAXprofile = OTAX_PROXY;
+  myOtax.OTAXprofile = OTAX_PROXY;
   attachInterrupt(1, RX434interrupt, CHANGE);
 }
 
@@ -151,38 +113,38 @@ void loop() {
   lastDoorStateDB = reading;
   
   //////////////////// Thermostat OTAX RX 434 ////////////////////////////////////
-  if (Otax.state == DONE) {
-      OTAXlastRX = millis();
+  if (myOtax.state == DONE) {
+      myOtax.OTAXlastRXtime = millis();
       
 #ifdef DEBUG_OTAX
       Serial.print("OTAX RX ");
-      Serial.println(Otax.data, HEX);
+      Serial.println(myOtax.data, HEX);
 #endif 
       
-      Otax.state = UNKNOWN;
-      switch (Otax.data) {
+      myOtax.state = UNKNOWN;
+      switch (myOtax.data) {
         case 0xDB2: // remote manual ON
         case 0xDB4: // remote manual OFF
         case 0xDB6: // remote manual end-of-msg
-                    OTAXprofile=OTAX_NOPROXY; // on a passé la télécommande en mode manuel, on ne fait plus rien
+                    myOtax.OTAXprofile=OTAX_NOPROXY; // on a passé la télécommande en mode manuel, on ne fait plus rien
                     break;                    // on s'arrete de transmettre (relayer/modifier) à la chaudière
 
-        case 0xCB2: OTAXprofile=OTAX_PROXY; OTAXrx=OTAX_RXON;  break; // remote PC ON
-        case 0xCB4: OTAXprofile=OTAX_PROXY; OTAXrx=OTAX_RXOFF; break; // remote PC OFF
-        case 0xCB6: OTAXprofile=OTAX_PROXY;                  break; // remote PC end-of-msg
+        case 0xCB2: myOtax.OTAXprofile=OTAX_PROXY; myOtax.OTAXrx=OTAX_RXON;  break; // remote PC ON
+        case 0xCB4: myOtax.OTAXprofile=OTAX_PROXY; myOtax.OTAXrx=OTAX_RXOFF; break; // remote PC OFF
+        case 0xCB6: myOtax.OTAXprofile=OTAX_PROXY;                  break; // remote PC end-of-msg
                      // si on recoit CB2,CB4,CB6: qq'un a demandé le mode "PC"
       }
   }
   
-  if ((OTAXprofile == OTAX_PROXY) && (OTAXlastTX + 60000 < millis()) && (OTAXlastRX + 10000 < millis())) {
-      if (( (OTAXrx == OTAX_RXON)&&(OTAXforce==OTAX_DONTFORCE)) || (OTAXforce==OTAX_FORCEON)) {
+  if ((myOtax.OTAXprofile == OTAX_PROXY) && (myOtax.OTAXlastTXtime + 60000 < millis()) && (myOtax.OTAXlastRXtime + 10000 < millis())) {
+      if (( (myOtax.OTAXrx == OTAX_RXON)&&(myOtax.OTAXforce==OTAX_DONTFORCE)) || (myOtax.OTAXforce==OTAX_FORCEON)) {
         Serial.println("TXch ON");
-        OTAXon();
-      } else if (( (OTAXrx == OTAX_RXOFF)&&(OTAXforce==OTAX_DONTFORCE)) || (OTAXforce==OTAX_FORCEOFF)) {
+        myOtax.OTAXon();
+      } else if (( (myOtax.OTAXrx == OTAX_RXOFF)&&(myOtax.OTAXforce==OTAX_DONTFORCE)) || (myOtax.OTAXforce==OTAX_FORCEOFF)) {
         Serial.println("TXch OFF");
-        OTAXoff();
+        myOtax.OTAXoff();
       }
-      OTAXlastTX = millis();
+      myOtax.OTAXlastTXtime = millis();
   }
   
   //////////////////// SERIAL CMD ////////////////////////////////////
@@ -203,11 +165,11 @@ void loop() {
       case 'K': digitalWrite(veluxDownPin, HIGH); delay(200); digitalWrite(veluxDownPin, LOW); break;
       case 'L': digitalWrite(veluxStopPin, HIGH); delay(200); digitalWrite(veluxStopPin, LOW); break;
       case 'M': digitalWrite(veluxUpPin, HIGH);   delay(200); digitalWrite(veluxUpPin, LOW);   break;
-      case 'N': Serial.println("force th off");   OTAXforce=OTAX_FORCEOFF;  break; // OTAX force off
-      case 'O': Serial.println("force th on");    OTAXforce=OTAX_FORCEON;   break; // OTAX force on
-      case 'P': Serial.println("don't force th"); OTAXforce=OTAX_DONTFORCE; break; // OTAX proxy no-override
-      case 'Q': Serial.println("th on");  OTAXon();  break; // test 1 paquet
-      case 'R': Serial.println("th off"); OTAXoff(); break; // test 1 paquet
+      case 'N': Serial.println("force th off");   myOtax.OTAXforce=OTAX_FORCEOFF;  break; // OTAX force off
+      case 'O': Serial.println("force th on");    myOtax.OTAXforce=OTAX_FORCEON;   break; // OTAX force on
+      case 'P': Serial.println("don't force th"); myOtax.OTAXforce=OTAX_DONTFORCE; break; // OTAX proxy no-override
+      case 'Q': Serial.println("th on");  myOtax.OTAXon();  break; // test 1 paquet
+      case 'R': Serial.println("th off"); myOtax.OTAXoff(); break; // test 1 paquet
       case 'S': {// data externe temp_appart/temp_paris/%humid_paris   S205;-013;056
         while (Serial.available() < 12)  { delay(100); }
         temp_appart_TEMPerUSB  = (Serial.read()-48)*100; // ascii '0'=48(dec)

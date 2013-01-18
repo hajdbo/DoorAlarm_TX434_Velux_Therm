@@ -1,18 +1,6 @@
 #include "Arduino.h"
 #include "PowerTX434.h"
 #include  <digitalWriteFast.h>
-//TX 434MHz pour powerOn/Off digital pin7
-// codepowerDevice (8bits) puis codePWR (17 bits)
-// puis 7 ms. répéter 20 fois (600 ms)
-// ON:  8S 2L 7S
-// OFF: 17S
-// 1: 2S 6L
-// 2: 4S 4L
-// 3: 2S 2L 2S 2L
-// 4: 6S 2L
-// 5: 2S 4L 2S
-
-//const int TXpin = 7;
 
 void PowerTX434::powerOn (int device) {
   switch(device) {
@@ -36,15 +24,15 @@ void PowerTX434::powerOff(int device) {
 
 /////////////////////////// POWER private methods //////////////////////////
 void PowerTX434::powerShort0() {
-  digitalWriteFast(TXpin, HIGH);
+  digitalWriteFast(TX434pin, HIGH);
   delayMicroseconds(250); // 220 on air
-  digitalWriteFast(TXpin, LOW);
+  digitalWriteFast(TX434pin, LOW);
   delayMicroseconds(650); // 690 on air
 }
 void PowerTX434::powerLong1() {
-  digitalWriteFast(TXpin, HIGH);
+  digitalWriteFast(TX434pin, HIGH);
   delayMicroseconds(700); // 680 on air
-  digitalWriteFast(TXpin, LOW);
+  digitalWriteFast(TX434pin, LOW);
   delayMicroseconds(200); // 240 on air
 }
 void PowerTX434::powerON() {
