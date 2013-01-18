@@ -18,7 +18,7 @@ apparemment une fin de msg est signalée avec DB6 (après on et après off)
 #include <inttypes.h>
 #include "pins.h"
 
-enum { UNKNOWN, OK, DONE };
+enum { OTAX_UNKNOWN, OTAX_OK, OTAX_DONE };
 enum { OTAX_PROXY, OTAX_NOPROXY };
 enum { OTAX_NOTRECEIVED, OTAX_RXOFF, OTAX_RXON };
 enum { OTAX_DONTFORCE, OTAX_FORCEOFF, OTAX_FORCEON, OTAX_REGULATE };
@@ -32,6 +32,7 @@ class Otax {
     unsigned long lastRXtime; // = 0; // dernier RX de la télécommande OTAX (ms)
 
       Otax();
+      void decideWhatToDo();
       void sendOn();
       void sendOff();
       uint8_t state;

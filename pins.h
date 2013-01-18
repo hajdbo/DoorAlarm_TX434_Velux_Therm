@@ -10,5 +10,4 @@
 #define veluxStopPin 11
 #define veluxUpPin   12
 
-
 #endif
